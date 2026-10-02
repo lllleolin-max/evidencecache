@@ -46,9 +46,11 @@ Fresh noneditable installation into `.venv` succeeded. `.venv/Scripts/python.exe
 ## Round 4 — restore the antichain after shared fact obligations
 
 Before: `eb58cc7c5951a08747fdb2b2c605daf971c3ba2c` (candidate release 0.1.0).
-Correction SHA is recorded after its separate commit. Corrected package: 0.1.1.
+Correction: `efa06521d41617da3d3cb7ed8e33b10cfca82d56`. Corrected package: 0.1.1.
 
 Independent review rejected the exact-frontier guarantee: an inner fact claim requires resolution `R`, and an outer claim with the same fact requires `(inner OR stale X) AND R`. The old planner returned `{R}` and its strict superset `{R,X}` while claiming `exact: true`. The source of the error was adding the outer claim's fact blocker after its support antichain was computed, without minimizing again. Prior three rounds remain valid historical corrections but did not detect this additional guarantee failure.
+
+The independent report for the old `eb58cc7` artifact assigned **Commercial 84, Technical 65 (raw 78, principal-guarantee cap), Innovation 82 — FAIL**. These historical scores belong only to that SHA; the corrected artifact does not inherit a passing score from its repair or from builder-run probes.
 
 On the independently installed old wheel, the unchanged reviewer probe `../reviews/evidencecache_conflict_frontier_probe.py` exited 1 and printed the nonminimal set. The separate unchanged `../reviews/evidencecache_independent_probes.py` ran 6 public-API probes successfully but reported **2 mismatches among 120 truth-table DAG cases**, seeds **66 and 119**, both returning an extra refresh-plus-resolution set. No review files were edited.
 
@@ -57,3 +59,5 @@ New `tests/test_fact_frontiers.py` was run against the uncorrected source first:
 The substantive correction routes fact-blocker set union through budgeted antichain minimization. This preserves exact subset minimality and deduplication after every conjunction; it does not drop incomparable alternatives or weaken the documented contract. A new budget test proves this work is counted and that exhaustion raises without a partial result. Initial corrected run: **47 tests, OK** (observed 1.283 s). Known limits of conditional repair semantics, fact extraction/trust and exponential relevant frontiers are unchanged.
 
 Noneditable reinstall command `.venv/Scripts/python.exe -m pip install --force-reinstall .` built/installed **evidencecache 0.1.1**. Against that installed wheel, the unchanged reviewer minimal probe exited **0**, printing `exact: True`, only `{resolve:["plan","price","eu"]}`, and `strict_supersets_returned: []`. The unchanged reviewer independent probe exited **0**, with **6 API tests, OK** and **120 oracle cases, 0 mismatches**. The installed-wheel full suite ran **47 tests, OK** (observed 2.604 s in a concurrent batch). `examples/workflow.py` passed; `tools/verify_workflow.py` passed all principal commands, artifact preservation, exits 1/2/3, 100-group baseline/ablation counts and a new installed-CLI shared-fact case with exactly one fact-resolution task. No reviewer-owned files were edited. These are observed verification results; a fresh independent score at the final SHA is still required.
+
+At exact historical commits, `tools/review_history.py --revision eb58cc7 --probe fact_frontier` reproduces both `{R}` and `{R,X}` with a nonempty strict-superset list; the same probe at `efa06521d41617da3d3cb7ed8e33b10cfca82d56` returns only `{R}` and `strict_supersets_returned: []`. `pip check` reports no broken requirements, and installed metadata/imports confirm version 0.1.1 from `.venv/Lib/site-packages`. This fourth correction has its own substantive commit; no prior history is rewritten.
