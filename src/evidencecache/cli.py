@@ -12,11 +12,11 @@ from .benchmark import benchmark
 from .engine import PlanningLimitError, Snapshot, compare
 from .events import apply_event
 from .fixtures import fixture
-from .model import Manifest, ManifestError, load
+from .model import Manifest, ManifestError, load, read_json
 
 
 def emit(value: dict, stream=None) -> None:
-    print(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False), file=stream or sys.stdout)
+    print(json.dumps(value, indent=2, ensure_ascii=True, allow_nan=False), file=stream or sys.stdout)
 
 
 def atomic_write(path: Path, value: dict) -> None:
@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "apply":
             if args.output.resolve() == args.manifest.resolve():
                 raise ManifestError("--output must differ from the input manifest; preserve the audit snapshot")
-            event = json.loads(args.event.read_text(encoding="utf-8"))
+            event = read_json(args.event)
             updated = apply_event(manifest, event)
             atomic_write(args.output, updated.to_dict())
             emit(dict(written=str(args.output), before_sha256=manifest.fingerprint, after_sha256=updated.fingerprint))

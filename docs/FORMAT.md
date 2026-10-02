@@ -23,7 +23,7 @@ Top-level keys are exactly `schema_version: 1`, `sources`, `claims`, and `answer
 }
 ```
 
-Version fields: required `id`, `observed_at`, `ttl_seconds`, `facts`; optional `revoked_at`, `digest` (`sha256:` and 64 lowercase hex digits). Digest is producer-supplied provenance, never a verified signature/content fetch. Times need seconds, up to six fractional digits and `Z`/numeric offset. Naive time, invalid dates and overflow fail. TTL is an integer from 0 to 315576000 seconds; zero is immediately expired. Revocation cannot precede observation. Simultaneous version observations are ambiguous and rejected.
+Version fields: required `id`, `observed_at`, `ttl_seconds`, `facts`; optional `revoked_at`, `digest` (`sha256:` and 64 lowercase hex digits). Digest is producer-supplied provenance, never a verified signature/content fetch. Times need seconds, up to six fractional digits and `Z`/numeric offset. Naive time, invalid dates, normalized overflow offsets such as `+00:60`, unknown offset `-00:00`, and datetime overflow fail. TTL is an integer from 0 to 315576000 seconds; zero is immediately expired. Revocation cannot precede observation. Simultaneous version observations are ambiguous and rejected.
 
 At `as_of=t`, the newest version with observation `<=t` is current. Future history is ignored for active facts. Only a current, unrevoked version with `t < expires_at` contributes facts. Old versions never become current again when a newer one expires/revokes. These are event-time reconstructions of the supplied history, not a bitemporal record of what a user actually knew in the past. Preserve earlier files for that audit purpose.
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from .model import Manifest, ManifestError, obj, timestamp
+from .model import Manifest, ManifestError, identifier, obj, timestamp
 
 
 def apply_event(manifest: Manifest, event: dict) -> Manifest:
@@ -20,11 +20,13 @@ def apply_event(manifest: Manifest, event: dict) -> Manifest:
         obj(event, {"kind", "source", "version"}, {"rebind_from"}, "event")
     else:
         obj(event, {"kind", "source", "version", "at"}, set(), "event")
+    identifier(event["source"], "event.source")
     if event["source"] not in sources:
         raise ManifestError(f"unknown event source {event['source']!r}")
     source = sources[event["source"]]
     versions = {v["id"]: v for v in source["versions"]}
     if event["kind"] == "revoke":
+        identifier(event["version"], "event.version")
         if event["version"] not in versions:
             raise ManifestError("cannot revoke unknown version")
         version = versions[event["version"]]
@@ -34,7 +36,10 @@ def apply_event(manifest: Manifest, event: dict) -> Manifest:
         version["revoked_at"] = event["at"]
     else:
         source["versions"].append(event["version"])
+        # Validate the new version before reading its fields or editing references.
+        Manifest.from_dict(data)
         if "rebind_from" in event:
+            identifier(event["rebind_from"], "event.rebind_from")
             if event["rebind_from"] not in versions:
                 raise ManifestError("cannot rebind unknown version")
             def rebind(expr):

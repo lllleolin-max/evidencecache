@@ -23,6 +23,10 @@ class ManifestError(ValueError):
 def timestamp(value: Any, path: str = "as_of") -> datetime:
     if not isinstance(value, str) or not TIME.fullmatch(value):
         raise ManifestError(f"{path}: expected RFC3339 timestamp with seconds and explicit offset")
+    if value.endswith("-00:00"):
+        raise ManifestError(f"{path}: -00:00 denotes an unknown offset; supply a known offset")
+    if not value.endswith("Z") and (int(value[-5:-3]) > 23 or int(value[-2:]) > 59):
+        raise ManifestError(f"{path}: offset hours/minutes outside RFC3339 range")
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
     except (ValueError, OverflowError) as exc:
@@ -40,6 +44,8 @@ def canonical(value: Any) -> str:
 def obj(value: Any, required: set[str], optional: set[str], path: str) -> dict:
     if not isinstance(value, dict):
         raise ManifestError(f"{path}: expected object")
+    if any(not isinstance(key, str) for key in value):
+        raise ManifestError(f"{path}: object keys must be strings")
     missing, unknown = required - value.keys(), value.keys() - required - optional
     if missing or unknown:
         raise ManifestError(f"{path}: missing={sorted(missing)} unknown={sorted(unknown)}")
@@ -55,6 +61,8 @@ def seq(value: Any, path: str, *, nonempty: bool = False) -> list:
 def string(value: Any, path: str, limit: int = 4096) -> str:
     if not isinstance(value, str) or not value or len(value) > limit:
         raise ManifestError(f"{path}: expected nonempty string with <= {limit} characters")
+    if any(0xD800 <= ord(c) <= 0xDFFF for c in value):
+        raise ManifestError(f"{path}: unpaired Unicode surrogate")
     return value
 
 
@@ -88,6 +96,8 @@ def fact(value: Any, path: str) -> Fact:
         raise ManifestError(f"{path}.value: use null, boolean, integer or string (decimals as strings)")
     if isinstance(v, str) and len(v) > 4096:
         raise ManifestError(f"{path}.value: string too long")
+    if isinstance(v, str) and any(0xD800 <= ord(c) <= 0xDFFF for c in v):
+        raise ManifestError(f"{path}.value: unpaired Unicode surrogate")
     if type(v) is int and abs(v) > 2**53 - 1:
         raise ManifestError(f"{path}.value: integer outside interoperable JSON range")
     return Fact(*(string(d[k], f"{path}.{k}", 256) for k in ("subject", "predicate", "scope")), canonical(v))
@@ -306,23 +316,33 @@ def _pairs(pairs: list[tuple[str, Any]]) -> dict:
     return result
 
 
-def loads(text: str) -> Manifest:
-    if len(text.encode("utf-8")) > MAX_BYTES:
-        raise ManifestError(f"manifest exceeds {MAX_BYTES} bytes")
+def parse_json(text: str) -> Any:
+    """Strict bounded JSON decoding shared by manifests and source events."""
     try:
-        data = json.loads(text, object_pairs_hook=_pairs,
+        if len(text.encode("utf-8")) > MAX_BYTES:
+            raise ManifestError(f"JSON document exceeds {MAX_BYTES} bytes")
+        return json.loads(text, object_pairs_hook=_pairs,
                           parse_constant=lambda s: (_ for _ in ()).throw(ManifestError(f"invalid JSON constant {s}")))
-        return Manifest.from_dict(data)
-    except (json.JSONDecodeError, RecursionError) as exc:
+    except ManifestError:
+        raise
+    except (ValueError, RecursionError, UnicodeError) as exc:
         raise ManifestError(f"invalid or excessively nested JSON: {exc}") from exc
 
 
-def load(path: str | Path) -> Manifest:
+def loads(text: str) -> Manifest:
+    return Manifest.from_dict(parse_json(text))
+
+
+def read_json(path: str | Path) -> Any:
     with Path(path).open("rb") as stream:
         content = stream.read(MAX_BYTES + 1)
     if len(content) > MAX_BYTES:
         raise ManifestError(f"manifest exceeds {MAX_BYTES} bytes")
     try:
-        return loads(content.decode("utf-8"))
+        return parse_json(content.decode("utf-8"))
     except UnicodeDecodeError as exc:
         raise ManifestError("manifest must be UTF-8") from exc
+
+
+def load(path: str | Path) -> Manifest:
+    return Manifest.from_dict(read_json(path))
