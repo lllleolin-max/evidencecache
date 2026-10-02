@@ -4,9 +4,11 @@ from __future__ import annotations
 from datetime import datetime
 from dataclasses import dataclass
 from itertools import product
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any
 
-from .model import Evidence, Expr, Fact, Manifest, ManifestError, canonical, iso, timestamp
+from .model import Answer, Claim, Evidence, Expr, Manifest, ManifestError, Version, canonical, iso, timestamp
 
 
 class PlanningLimitError(ValueError):
@@ -19,6 +21,25 @@ class State:
     blockers: frozenset[str]
 
 
+def _freeze(value: Any) -> Any:
+    """Detach mutable records and expose recursively read-only snapshot state."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    return value
+
+
+def _thaw(value: Any) -> Any:
+    """Fresh JSON-compatible exports; callers may annotate their own reports."""
+    if isinstance(value, Mapping):
+        return {key: _thaw(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw(item) for item in value]
+    return value
+
+
+@dataclass(frozen=True, init=False, eq=False)
 class Snapshot:
     """Evaluate one immutable manifest at an explicit aware RFC3339 instant.
 
@@ -26,17 +47,29 @@ class Snapshot:
     not certified true in the world. Source URIs are inert provenance strings.
     """
 
+    manifest: Manifest
+    as_of: datetime
+    versions: Mapping[Evidence, Version]
+    evidence: Mapping[Evidence, Mapping[str, Any]]
+    facts: Mapping[tuple[str, str, str], tuple[Mapping[str, Any], ...]]
+    tasks: Mapping[str, Mapping[str, Any]]
+    claims: Mapping[str, State]
+    answers: Mapping[str, State]
+    claim_by_id: Mapping[str, Claim]
+    answer_by_id: Mapping[str, Answer]
+    fact_blockers: Mapping[str, str]
+
     def __init__(self, manifest: Manifest, as_of: str):
-        self.manifest = manifest
-        self.as_of = timestamp(as_of)
-        self.versions = {Evidence(s.id, v.id): v for s in manifest.sources for v in s.versions}
-        self.evidence: dict[Evidence, dict] = {}
-        self.facts: dict[tuple[str, str, str], list[dict]] = {}
-        self.tasks: dict[str, dict] = {}
-        self.claims: dict[str, State] = {}
-        self.answers: dict[str, State] = {}
-        self.claim_by_id = {c.id: c for c in manifest.claims}
-        self.answer_by_id = {a.id: a for a in manifest.answers}
+        object.__setattr__(self, "manifest", manifest)
+        object.__setattr__(self, "as_of", timestamp(as_of))
+        object.__setattr__(self, "versions", {Evidence(s.id, v.id): v for s in manifest.sources for v in s.versions})
+        object.__setattr__(self, "evidence", {})
+        object.__setattr__(self, "facts", {})
+        object.__setattr__(self, "tasks", {})
+        object.__setattr__(self, "claims", {})
+        object.__setattr__(self, "answers", {})
+        object.__setattr__(self, "claim_by_id", {c.id: c for c in manifest.claims})
+        object.__setattr__(self, "answer_by_id", {a.id: a for a in manifest.answers})
         for source in manifest.sources:
             known = [v for v in source.versions if v.observed_at <= self.as_of]
             current = known[-1] if known else None
@@ -64,7 +97,7 @@ class Snapshot:
                     self.tasks[task_id] = dict(id=task_id, kind="revalidate_evidence" if status == "EXPIRED" else "replace_evidence",
                                                 **ref.to_dict(), reason=status,
                                                 instruction="Fetch/verify current evidence, record a new version, and review/rebind affected claims.")
-        self.fact_blockers = {}
+        object.__setattr__(self, "fact_blockers", {})
         for claim in manifest.claims:
             if claim.fact is None:
                 continue
@@ -86,6 +119,9 @@ class Snapshot:
             self.claims[claim_id] = state
         for answer in manifest.answers:
             self.answers[answer.id] = self._state(answer.support)
+        for name in ("versions", "evidence", "facts", "tasks", "claims", "answers",
+                     "claim_by_id", "answer_by_id", "fact_blockers"):
+            object.__setattr__(self, name, _freeze(getattr(self, name)))
 
     @staticmethod
     def refresh_id(ref: Evidence) -> str:
@@ -110,8 +146,8 @@ class Snapshot:
         return dict(schema_version=1, manifest_sha256=self.manifest.fingerprint, as_of=iso(self.as_of),
                     answers=[item(k, self.answers[k]) for k in selected],
                     claims=[item(k, self.claims[k]) for k in sorted(self.claims)],
-                    evidence=[self.evidence[k] for k in sorted(self.evidence)],
-                    tasks=[self.tasks[k] for k in sorted(self.tasks)])
+                    evidence=[_thaw(self.evidence[k]) for k in sorted(self.evidence)],
+                    tasks=[_thaw(self.tasks[k]) for k in sorted(self.tasks)])
 
     def _frontier(self, expr: Expr, claim_frontiers: dict, budget: _Budget,
                   *, witnesses: bool) -> list[frozenset[str]]:
@@ -158,7 +194,7 @@ class Snapshot:
                     status="VALID" if self.answers[answer].valid else "BLOCKED",
                     exact=True, candidates_examined=work,
                     minimum_task_count=len(plans[0]) if plans else None,
-                    plans=[dict(task_ids=sorted(p), tasks=[self.tasks[t] for t in sorted(p)]) for p in plans],
+                    plans=[dict(task_ids=sorted(p), tasks=[_thaw(self.tasks[t]) for t in sorted(p)]) for p in plans],
                     semantics="Conditional minimal obligations; execution can reveal changed facts. Re-evaluation is mandatory.")
 
     def witnesses(self, answer: str, max_work: int = 100_000) -> dict:
