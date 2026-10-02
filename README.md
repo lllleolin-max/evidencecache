@@ -26,6 +26,7 @@ python -m evidencecache evaluate demo.json --as-of 2026-01-02T00:00:00Z
 python -m evidencecache witness demo.json --as-of 2026-01-02T00:00:00Z --answer g0000-alternative
 python -m evidencecache plan demo.json --as-of 2026-01-02T00:00:00Z --answer g0000-conflict
 python examples/workflow.py
+python tools/verify_workflow.py
 python -m evidencecache benchmark --groups 100
 python -m unittest discover -s tests -v
 ```
@@ -38,7 +39,7 @@ Expected decisions in the synthetic EU support-policy fixture:
 | `g0000-steady` | `VALID` | Independent service-status evidence remains fresh |
 | `g0000-conflict` | `BLOCKED`, `resolve_fact` task | Current pricing and billing sources assert different prices in the same scope |
 
-`examples/workflow.py` executes cache gating → plan → new version → compare → reviewed rebind → re-evaluate, and revokes a demonstrably erroneous fixture assertion to resolve a conflict. Output is JSON. `examples/publish-status.json` works with:
+`examples/workflow.py` executes cache gating → plan → new version → compare → reviewed rebind → re-evaluate, and revokes a demonstrably erroneous fixture assertion to resolve a conflict. Output is JSON. `tools/verify_workflow.py` also runs the installed CLI in subprocesses, checks exit codes and artifact preservation, and verifies all five synthetic policy/ablation results. `examples/publish-status.json` works with:
 
 ```sh
 python -m evidencecache apply demo.json examples/publish-status.json --output next.json
@@ -87,7 +88,7 @@ Ragas already provides RAG quality metrics; dbt already provides freshness and d
 - Files are local. The library fetches no URIs and executes no manifest code. Fingerprints identify content, not authenticity. Keep snapshots and apply external access controls.
 - GitHub Actions is configured for Ubuntu/Windows with Python 3.11/3.14. Checked-in workflow configuration is not evidence that remote CI has run.
 
-[Architecture](docs/ARCHITECTURE.md) · [Review/change log](docs/ITERATIONS.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
+[Architecture](docs/ARCHITECTURE.md) · [Review/change log](docs/ITERATIONS.md) · [Reproduction evidence](docs/VERIFICATION.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
 ## 中文说明
 
@@ -95,6 +96,6 @@ Ragas already provides RAG quality metrics; dbt already provides freshness and d
 
 本项目适用于维护政策、产品配置、客服知识等 RAG 应用的工程团队。输入是本地 JSON：来源版本历史、明确时区的观测时间、TTL、结构化事实、主张以及答案之间的 AND/OR 支持关系。来源替换、撤销和过期会影响引用该版本的答案；仍有有效备用证据的答案可以保留。相同主体、属性和适用范围出现不同的当前值时，会返回带来源信息的冲突任务。
 
-上面的安装和 CLI 命令可直接运行。Windows 使用 `py -3`。演示的三条答案分别展示“备用证据仍有效”“独立来源不受影响”“来源都新鲜但事实冲突”。`python examples/workflow.py` 演示完整的来源更新、影响比较、人工确认后重新绑定以及再次核验流程；`benchmark` 对比全库 TTL、平面来源 TTL 和功能消融，所有数据均为公开的合成样例。
+上面的安装和 CLI 命令可直接运行。Windows 使用 `py -3`。演示的三条答案分别展示“备用证据仍有效”“独立来源不受影响”“来源都新鲜但事实冲突”。`python examples/workflow.py` 演示完整的来源更新、影响比较、人工确认后重新绑定以及再次核验流程；`python tools/verify_workflow.py` 在临时目录运行已安装 CLI，核对错误退出码、输入保护和五种策略的结果。`benchmark` 对比全库 TTL、平面来源 TTL 和功能消融，所有数据均为公开的合成样例。
 
 这是声明式证据约束检查，不会自动理解自然语言矛盾，不证明事实真实，也不替代 Ragas 的质量评测或 dbt 的数据编排。最小刷新集合表示条件性核验义务，执行后必须重新评估。库不会访问来源 URL；内容指纹不等同于签名。实际客户、收入和付费意愿均未知。

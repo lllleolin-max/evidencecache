@@ -27,8 +27,18 @@ At the committed correction, `py -3 tools/review_history.py --revision 4b8db95 -
 ## Round 3 — keep selected-answer planning independent of unrelated frontiers
 
 Before: `4b8db95d7900fe053277417ab9e566667f98e38e`.
-After SHA is recorded once committed in the next log update.
+Correction: `02832c11cc8fe68e0dba542a32e88668f65c09b7`.
 
 Self-review found `_plan` enumerating all claims, even ones not referenced by the requested answer. The one-citation answer in `tools/review_history.py --revision 4b8db95 --probe planning` is beside an unrelated conjunction of 12 disjoint pairs (4096 minimal sets). Both expired-source repair planning and fresh-source witness planning raise `PlanningLimitError` at `max_work=100`. Five new regression tests run before correction: **4 errors, 1 pass**; the errors include a transitive diamond query and low-budget conflict query besides the two unrelated exponential cases.
 
 The correction iteratively discovers the answer's transitive claim cone and computes only those frontiers in the existing topological order. Full snapshot evaluation and uncited structured-fact conflict detection remain global. Tests also request the genuinely expensive answer and require explicit `PlanningLimitError`, so the correction does not silently suppress legitimate frontier complexity. `py -3 -m unittest discover -s tests -v` ran **39 tests, OK** (observed 0.611 s), including the 60-seed independent exhaustive Boolean oracle; `git diff --check` passed. Boundary: relevant frontiers can still be exponential; candidate counting is not a hard CPU or memory deadline.
+
+At the committed correction, `py -3 tools/review_history.py --revision 02832c1 --probe planning` prints `exact: true, candidates_examined: 0` for both one-leaf queries. Zero counts no antichain set combinations; the leaf lookup and dependency walk still perform work. Requesting the relevant exponential answer is separately tested to fail explicitly at the same limit.
+
+## Subsequent release verification
+
+The following packaging/evidence updates are **not** counted as an additional review/correction round. The baseline and historical first correction were authored before the model handoff; the replacement builder independently reconstructed round 1 and implemented rounds 2/3 using GPT-6.1 SOL / Ultra. No historical model attribution is rewritten. All adoption, revenue and independent axis scores remain unknown here.
+
+SPDX metadata uses `license = "MIT"`, `license-files = ["LICENSE"]` and `setuptools>=77.0.3`, consistent with the [official license migration guide](https://setuptools.pypa.io/en/stable/userguide/license_migration.html) rechecked 2026-10-03. Ragas metrics/faithfulness and dbt freshness/source-freshness pages linked in `COMPARISON.md` were rechecked on the same date. They are credited prior art; neither incumbent was executed as a comparative benchmark.
+
+Fresh noneditable installation into `.venv` succeeded. `.venv/Scripts/python.exe -m pip check` returned no broken requirements; `-m unittest discover -s tests -v` ran **39 tests, OK** (observed 1.576 s in a concurrent verification batch). `examples/workflow.py` restored three synthetic valid answers after reviewed rebind/revocation; `tools/verify_workflow.py` executed validate/evaluate/witness/plan/apply/compare/benchmark, verified artifact preservation and all five policy contrasts. The console entry point `evidencecache.exe --help` succeeded. Installed package metadata and import location confirmed the wheel rather than the editable checkout. Full reproduction evidence and bounded results are in [VERIFICATION.md](VERIFICATION.md). The final verifier was rerun successfully with explicit planning exhaustion: exit 3, `exact: false`, no partial frontier; invalid apply returned exit 2 and preserved both input and existing output. CI invokes that verifier and the SDK example; remote jobs remain unverified locally.
