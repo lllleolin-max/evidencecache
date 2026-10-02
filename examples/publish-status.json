@@ -1,0 +1,10 @@
+{
+  "kind": "publish",
+  "source": "g0000-status",
+  "version": {
+    "id": "v2",
+    "observed_at": "2026-01-02T00:00:00Z",
+    "ttl_seconds": 86400,
+    "facts": [{"subject":"g0000:service","predicate":"status","scope":"global","value":"operational"}]
+  }
+}

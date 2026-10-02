@@ -1,0 +1,21 @@
+name: verify
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.14']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install .
+      - run: python -m unittest discover -s tests -v
+      - run: python -m evidencecache demo --output demo.json
+      - run: python -m evidencecache validate demo.json
+      - run: python -m evidencecache benchmark --groups 20
