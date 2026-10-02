@@ -43,6 +43,23 @@ def probe(name: str) -> dict:
         plan["plans"][0]["tasks"][0]["reason"] = "FORGED"
         return dict(later_evidence_status=snap.report()["evidence"][0]["status"],
                     later_task_reason=snap.tasks[task_id]["reason"])
+    if name == "fact_frontier":
+        # Minimal reproduction independently discovered during external review:
+        # ((resolve R OR refresh X) AND resolve R) has only {R} as a
+        # subset-minimal set. Query a direct claim leaf to expose the invariant.
+        value = lambda price: dict(subject="plan", predicate="price", scope="eu", value=price)
+        data = dict(schema_version=1, sources=[
+            dict(id=key, uri="urn:review:" + key, versions=[dict(id="v1",
+                 observed_at="2026-01-01T00:00:00Z", ttl_seconds=ttl, facts=[value(price)])])
+            for key, ttl, price in (("fresh", 172800, 10), ("opponent", 172800, 20), ("stale", 86400, 10))],
+            claims=[dict(id="inner", text="Declared price", fact=value(10), support=evidence("fresh")),
+                    dict(id="outer", text="Declared price", fact=value(10),
+                         support={"any": [{"claim": "inner"}, evidence("stale")]})],
+            answers=[dict(id="a", text="Declared price", support={"claim": "outer"})])
+        result = Snapshot(Manifest.from_dict(data), AS_OF).plan("a")
+        sets = [frozenset(p["task_ids"]) for p in result["plans"]]
+        return dict(exact=result["exact"], plans=[sorted(p) for p in sets],
+                    strict_supersets_returned=[sorted(p) for p in sets if any(q < p for q in sets)])
     # Query a one-leaf answer beside an unrelated 2^12 frontier. Expired
     # alternatives explode repair sets; fresh alternatives explode witnesses.
     results = {}
@@ -70,7 +87,7 @@ def probe(name: str) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--revision", required=True, help="Exact local Git commit/ref; archived read-only")
-    parser.add_argument("--probe", choices=("ingress", "isolation", "planning"), required=True)
+    parser.add_argument("--probe", choices=("ingress", "isolation", "planning", "fact_frontier"), required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     sha = subprocess.check_output(["git", "rev-parse", args.revision], cwd=root, text=True).strip()

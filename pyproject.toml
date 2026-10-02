@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evidencecache"
-version = "0.1.0"
+version = "0.1.1"
 description = "Deterministic answer-specific evidence freshness, conflicts and refresh frontiers"
 readme = "README.md"
 requires-python = ">=3.11"

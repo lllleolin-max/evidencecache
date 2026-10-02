@@ -191,7 +191,10 @@ class Snapshot:
             plans = self._frontier(self.claim_by_id[claim_id].support, frontiers, budget, witnesses=witnesses)
             blocker = self.fact_blockers.get(claim_id)
             if blocker:
-                plans = [] if witnesses else [p | {blocker} for p in plans]
+                # Union with an already shared obligation changes inclusion:
+                # ({R}, {X}) AND R becomes ({R}, {R,X}), whose only minimal
+                # member is {R}. Preserve the antichain after this AND too.
+                plans = [] if witnesses else budget.minimal(p | {blocker} for p in plans)
             frontiers[claim_id] = plans
         plans = self._frontier(self.answer_by_id[answer].support, frontiers, budget, witnesses=witnesses)
         return sorted(plans, key=lambda p: (len(p), sorted(p))), budget.used

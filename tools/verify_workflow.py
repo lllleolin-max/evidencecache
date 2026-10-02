@@ -61,12 +61,31 @@ def main() -> None:
                             without_fact_checks=(0, 100), without_alternative_support=(100, 0))
         sdk = Snapshot(Manifest.from_dict(fixture()), AS_OF)
         assert sdk.answers["g0000-alternative"].valid
+        # Release 0.1.1 regression: an outer price claim shares its fact
+        # resolution task with an inner one and has a stale alternative. The
+        # CLI must return {R}, never its unnecessary superset {R, refresh X}.
+        shared = fixture()
+        old_price = json.loads(json.dumps(next(s for s in shared["sources"] if s["id"] == "g0000-price")))
+        old_price["id"] = "g0000-old-price"
+        old_price["versions"][0]["ttl_seconds"] = 86400
+        shared["sources"].append(old_price)
+        declared = next(c["fact"] for c in shared["claims"] if c["id"] == "g0000-cost")
+        shared["claims"].append(dict(id="outer-cost", text="Declared price", fact=declared,
+            support={"any": [{"claim": "g0000-cost"}, {"evidence": {"source": "g0000-old-price", "version": "v1"}}]}))
+        shared["answers"].append(dict(id="outer-answer", text="Declared price", support={"claim": "outer-cost"}))
+        shared_file = root / "shared.json"
+        shared_file.write_text(json.dumps(shared), encoding="utf-8")
+        shared_plan = cli("plan", shared_file, "--as-of", AS_OF, "--answer", "outer-answer")
+        assert shared_plan["exact"] and len(shared_plan["plans"]) == 1
+        assert len(shared_plan["plans"][0]["task_ids"]) == 1
+        assert shared_plan["plans"][0]["tasks"][0]["kind"] == "resolve_fact"
         print(json.dumps(dict(python=sys.version.split()[0], validation=validation,
                               answer_states=states, witness=witness["witnesses"],
                               minimum_conflict_tasks=plan["minimum_task_count"],
                               invalidated_answers=impact["invalidated_answers"],
                               invalid_input_exit=2, planning_limit_exit=3, partial_frontier_returned=False,
                               input_preserved=True, rejected_output_preserved=True,
+                              shared_fact_frontier_exact=True, shared_fact_resolution_tasks=1,
                               synthetic_benchmark=[dict(policy=k, unnecessary_invalidations=v[0], unsafe_reuses=v[1])
                                                    for k, v in rows.items()], sdk_valid=True), indent=2))
 
