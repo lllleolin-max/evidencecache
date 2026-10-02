@@ -173,8 +173,21 @@ class Snapshot:
         if type(max_work) is not int or max_work < 1:
             raise ManifestError("max_work must be a positive integer")
         budget = _Budget(max_work)
+        # Snapshot conflict detection is global, but conditional frontier
+        # enumeration only needs the selected answer's transitive claim cone.
+        # An unrelated exponential formula must not consume this query budget.
+        required = {leaf.claim for leaf in self.answer_by_id[answer].support.leaves()}
+        pending = list(required)
+        while pending:
+            claim_id = pending.pop()
+            for leaf in self.claim_by_id[claim_id].support.leaves():
+                if leaf.op == "claim" and leaf.claim not in required:
+                    required.add(leaf.claim)
+                    pending.append(leaf.claim)
         frontiers = {}
         for claim_id in self.manifest.order:
+            if claim_id not in required:
+                continue
             plans = self._frontier(self.claim_by_id[claim_id].support, frontiers, budget, witnesses=witnesses)
             blocker = self.fact_blockers.get(claim_id)
             if blocker:

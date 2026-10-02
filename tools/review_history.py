@@ -43,20 +43,22 @@ def probe(name: str) -> dict:
         plan["plans"][0]["tasks"][0]["reason"] = "FORGED"
         return dict(later_evidence_status=snap.report()["evidence"][0]["status"],
                     later_task_reason=snap.tasks[task_id]["reason"])
-    # An independent fresh answer alongside an unrelated 2^12 repair frontier.
-    data = dict(schema_version=1, sources=[], claims=[], answers=[])
-    for i in range(25):
-        data["sources"].append(dict(id=f"s{i}", uri=f"urn:review:{i}", versions=[
-            dict(id="v1", observed_at="2026-01-01T00:00:00Z",
-                 ttl_seconds=172800 if i == 24 else 86400, facts=[])]))
-    data["claims"] = [
-        dict(id="simple", text="Independent fresh answer", support=evidence("s24")),
-        dict(id="unrelated", text="Unrelated conjunction of alternatives", support={"all": [
-            {"any": [evidence(f"s{i}"), evidence(f"s{i+1}")]} for i in range(0, 24, 2)]})]
-    data["answers"] = [dict(id="simple", text="Reusable", support={"claim": "simple"})]
-    snap = Snapshot(Manifest.from_dict(data), AS_OF)
+    # Query a one-leaf answer beside an unrelated 2^12 frontier. Expired
+    # alternatives explode repair sets; fresh alternatives explode witnesses.
     results = {}
     for operation in ("plan", "witnesses"):
+        fresh = operation == "witnesses"
+        data = dict(schema_version=1, sources=[], claims=[], answers=[])
+        for i in range(25):
+            data["sources"].append(dict(id=f"s{i}", uri=f"urn:review:{i}", versions=[
+                dict(id="v1", observed_at="2026-01-01T00:00:00Z",
+                     ttl_seconds=172800 if fresh else 86400, facts=[])]))
+        data["claims"] = [
+            dict(id="simple", text="Independent answer", support=evidence("s24")),
+            dict(id="unrelated", text="Unrelated conjunction of alternatives", support={"all": [
+                {"any": [evidence(f"s{i}"), evidence(f"s{i+1}")]} for i in range(0, 24, 2)]})]
+        data["answers"] = [dict(id="simple", text="One citation", support={"claim": "simple"})]
+        snap = Snapshot(Manifest.from_dict(data), AS_OF)
         try:
             result = getattr(snap, operation)("simple", max_work=100)
             results[operation] = dict(exact=result["exact"], candidates_examined=result["candidates_examined"])

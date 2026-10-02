@@ -16,8 +16,19 @@ Verification at the correction: `py -3 -m pip install -e .` succeeded; `py -3 -m
 ## Round 2 — isolate snapshots from caller report annotations
 
 Before: `45c08c3e5974bd7d2d80718fca9f7c6bfd3f04b1`.
-After SHA is recorded once committed in the next log update.
+Correction: `4b8db95d7900fe053277417ab9e566667f98e38e`.
 
 Self-review found report/plan records aliasing internal mutable state. `py -3 tools/review_history.py --revision 45c08c3 --probe isolation` prints `later_evidence_status: FORGED` and `later_task_reason: FORGED` after annotating returned JSON. New regression tests run before correction: 4 tests, 12 assertion failures across 3 tests (9 mapping-mutation subtests, nested state mutability and two detached-export checks); manifest detachment was already correct. The pre-change test originals were serialized copies, avoiding a shared-reference false pass.
 
 The correction freezes Snapshot attributes, recursively exposes read-only mappings/tuples, and returns fresh ordinary JSON structures for report/task exports. It includes deep provenance/fact-key isolation, not only a shallow dictionary copy. It preserves the immutable manifest and existing SDK read access. `py -3 -m unittest discover -s tests -v` ran **34 tests, OK** (observed 0.635 s); `git diff --check` passed. Boundary: Python's deliberate reflection can bypass normal object immutability; this is protection against ordinary SDK mutation, not a hostile-process sandbox.
+
+At the committed correction, `py -3 tools/review_history.py --revision 4b8db95 --probe isolation` prints `later_evidence_status: FRESH`, `later_task_reason: CONFLICT`; original snapshot decisions remain intact after returned report annotations.
+
+## Round 3 — keep selected-answer planning independent of unrelated frontiers
+
+Before: `4b8db95d7900fe053277417ab9e566667f98e38e`.
+After SHA is recorded once committed in the next log update.
+
+Self-review found `_plan` enumerating all claims, even ones not referenced by the requested answer. The one-citation answer in `tools/review_history.py --revision 4b8db95 --probe planning` is beside an unrelated conjunction of 12 disjoint pairs (4096 minimal sets). Both expired-source repair planning and fresh-source witness planning raise `PlanningLimitError` at `max_work=100`. Five new regression tests run before correction: **4 errors, 1 pass**; the errors include a transitive diamond query and low-budget conflict query besides the two unrelated exponential cases.
+
+The correction iteratively discovers the answer's transitive claim cone and computes only those frontiers in the existing topological order. Full snapshot evaluation and uncited structured-fact conflict detection remain global. Tests also request the genuinely expensive answer and require explicit `PlanningLimitError`, so the correction does not silently suppress legitimate frontier complexity. `py -3 -m unittest discover -s tests -v` ran **39 tests, OK** (observed 0.611 s), including the 60-seed independent exhaustive Boolean oracle; `git diff --check` passed. Boundary: relevant frontiers can still be exponential; candidate counting is not a hard CPU or memory deadline.
