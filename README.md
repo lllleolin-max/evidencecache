@@ -16,20 +16,53 @@ source versions → AND/OR claims → cached answers
 
 ## Try the complete workflow
 
-From this checkout (use `py -3` in place of `python` on Windows):
+Install from a source checkout with Python 3.11+:
 
 ```sh
-python -m pip install .
-python -m evidencecache demo --output demo.json
+git clone https://github.com/lllleolin-max/evidencecache.git
+cd evidencecache
+```
+
+Linux/macOS:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install .
+.venv/bin/python -m evidencecache demo --output demo.json
+```
+
+Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install .
+.venv\Scripts\python.exe -m evidencecache demo --output demo.json
+```
+
+In the remaining examples, `python` means this environment's interpreter:
+`.venv/bin/python` on Linux/macOS or `.venv\Scripts\python.exe` on Windows.
+The runtime uses the standard library; source installation may download build
+dependencies. No PyPI release is required for these instructions.
+
+Validate the generated local manifest, then evaluate at a fixed snapshot:
+
+```sh
 python -m evidencecache validate demo.json
 python -m evidencecache evaluate demo.json --as-of 2026-01-02T00:00:00Z
-python -m evidencecache witness demo.json --as-of 2026-01-02T00:00:00Z --answer g0000-alternative
-python -m evidencecache plan demo.json --as-of 2026-01-02T00:00:00Z --answer g0000-conflict
-python examples/workflow.py
-python tools/verify_workflow.py
-python -m evidencecache benchmark --groups 100
-python -m unittest discover -s tests -v
 ```
+
+`demo` writes `demo.json`; subsequent commands read it and print JSON on stdout.
+The three commands exit `0`, including the evaluation that reports a blocked
+answer: the default is a report, not a CI rejection. Use `--fail-on-blocked` to
+make a blocked answer fail a gate:
+
+```sh
+python -m evidencecache evaluate demo.json --as-of 2026-01-02T00:00:00Z --fail-on-blocked
+```
+
+This fixture exits `1`. Invalid input exits `2`; an exact-planning work limit
+exits `3`. Handled errors are JSON on stderr. Re-running `demo --output demo.json`
+replaces that demo file, so choose a separate output path for saved audit snapshots.
 
 Expected decisions in the synthetic EU support-policy fixture:
 
@@ -39,6 +72,14 @@ Expected decisions in the synthetic EU support-policy fixture:
 | `g0000-steady` | `VALID` | Independent service-status evidence remains fresh |
 | `g0000-conflict` | `BLOCKED`, `resolve_fact` task | Current pricing and billing sources assert different prices in the same scope |
 
+Continue from a decision to its supporting evidence and conditional repair tasks:
+
+```sh
+python -m evidencecache witness demo.json --as-of 2026-01-02T00:00:00Z --answer g0000-alternative
+python -m evidencecache plan demo.json --as-of 2026-01-02T00:00:00Z --answer g0000-conflict
+python examples/workflow.py
+```
+
 `examples/workflow.py` executes cache gating → plan → new version → compare → reviewed rebind → re-evaluate, and revokes a demonstrably erroneous fixture assertion to resolve a conflict. Output is JSON. `tools/verify_workflow.py` also runs the installed CLI in subprocesses, checks exit codes and artifact preservation, and verifies all five synthetic policy/ablation results. `examples/publish-status.json` works with:
 
 ```sh
@@ -47,6 +88,14 @@ python -m evidencecache compare demo.json next.json --as-of 2026-01-02T00:00:00Z
 ```
 
 Only `g0000-steady` becomes invalid. A source replacement never silently rebinds its old citations.
+
+Optional verification and comparison commands:
+
+```sh
+python tools/verify_workflow.py
+python -m evidencecache benchmark --groups 100
+python -m unittest discover -s tests -v
+```
 
 ## Embed the gate
 
