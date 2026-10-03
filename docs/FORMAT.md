@@ -48,6 +48,15 @@ Planning enumerates only the requested answer's transitive claim dependencies. U
 
 `apply_event(manifest, event)` returns a new fully validated manifest. Events:
 
+The optional v0.2 `SnapshotCache` SDK retains these immutable manifest/snapshot
+semantics and wire formats. Its constructor and every update require one explicit
+matching `trust_domain`; `advance`, `apply_event` and `update` return the new
+snapshot without changing previously returned ones. The label guards accidental
+mixing, not authentication. Global uncited fact-key checks and temporal boundaries
+remain active. Definition edits can use the full fallback. `snapshot.work` is a
+read-only SDK diagnostic, separate from JSON exports. See [INCREMENTAL.md](INCREMENTAL.md)
+for signatures, evaluation counts, linear residual costs and single-writer limits.
+
 ```json
 {"kind":"publish", "source":"policy", "version":{"id":"r2","observed_at":"2026-01-02T00:00:00Z","ttl_seconds":86400,"facts":[]}}
 ```

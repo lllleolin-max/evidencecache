@@ -20,4 +20,5 @@ jobs:
       - run: python -m evidencecache validate demo.json
       - run: python -m evidencecache benchmark --groups 20
       - run: python examples/workflow.py
+      - run: python examples/incremental.py
       - run: python tools/verify_workflow.py

@@ -96,6 +96,8 @@ class IncrementalTests(unittest.TestCase):
         self.assertEqual(after.work["mode"], "incremental")
         same(self, after)
         event["version"]["facts"][0]["value"] = 123
+        event["version"].update(id="v3", observed_at="2026-01-02T01:00:00Z")
+        event["rebind_from"] = "v2"
         data["sources"].clear()
         report = before.report()
         report["answers"].clear()

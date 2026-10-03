@@ -113,6 +113,38 @@ else:
 
 Integrate after retrieval/claim extraction and before cache reuse. The producer declares support and fact scope; the library checks those declarations. It cannot establish text entailment, source trustworthiness, undisclosed disagreements or real-world truth. TTL is an explicit freshness policy, not a probability of correctness. A refresh plan is conditional: obtain evidence, review changed facts, then evaluate again. See [format and API](docs/FORMAT.md).
 
+### Repeated SDK updates in memory
+
+Version 0.2 adds `SnapshotCache` for a single writer in one declared trust domain:
+
+```python
+from evidencecache import SnapshotCache, load
+
+cache = SnapshotCache(load("demo.json"), "2026-01-02T00:00:00Z",
+                      trust_domain="curated-support-policy")
+before = cache.snapshot
+after = cache.advance("2026-01-03T00:00:00Z",
+                      trust_domain="curated-support-policy")
+# before remains an immutable snapshot. Plans and witnesses use after's data.
+print(after.report())
+```
+
+`cache.apply_event(event, trust_domain=..., as_of=...)` applies a fully validated
+publish/revoke event, including reviewed rebinds. `cache.update(manifest, as_of,
+trust_domain=...)` accepts a new validated immutable manifest. A new source can
+block an answer through a global fact conflict even when no claim cites it.
+Observation, revocation and half-open expiry boundaries are reevaluated when time
+moves forward or backward. Graph/claim-definition edits use full evaluation.
+Run `python examples/incremental.py` for publish, reviewed rebind and exact expiry.
+
+The cache reuses unaffected lifecycle rows and claim/answer states. Validation,
+definition comparison, shallow mapping copies and time-index maintenance still
+perform linear work; planning is recomputed with the existing exactness budget.
+The CLI keeps full `Snapshot` behavior. There is no persisted cache or lock for
+multiple writers. The domain label prevents accidental mixing, and does not
+authenticate input. Use `Snapshot(manifest, as_of)` for one-off evaluation and as
+the complete reference. [Measured costs and limits](docs/INCREMENTAL.md).
+
 ## What changes the decision?
 
 `benchmark --groups 100` generates 500 synthetic sources and 300 answers. The independently declared fixture labels identify 200 reusable answers and 100 blocked by known structured conflicts. It runs two deliberately simple, **version-aware** TTL baselines and two mechanism ablations; it does not run Ragas or dbt.

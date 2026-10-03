@@ -4,5 +4,5 @@ from .engine import PlanningLimitError, Snapshot, compare
 from .events import apply_event
 from .incremental import SnapshotCache
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __all__ = ["Manifest", "ManifestError", "PlanningLimitError", "Snapshot", "SnapshotCache", "apply_event", "compare", "load", "loads"]
