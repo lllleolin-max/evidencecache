@@ -46,3 +46,31 @@ python tools/review_history.py --revision efa0652 --probe fact_frontier
 ```
 
 The runner archives a trusted local Git revision into a temporary directory and imports its source. It observes corrected/uncorrected behavior, not self-awarded scores. Detailed before/after outputs, correction SHAs and limits are in `ITERATIONS.md`. No customers, adoption, revenue, production safety, competitor superiority or exclusive algorithm novelty are inferred from these runs.
+
+## 0.2.0 optional memory SDK
+
+Normal installation remains `python -m pip install .`; no editable import or
+`PYTHONPATH` is needed. Run:
+
+```sh
+python -m unittest discover -s tests -v
+python examples/incremental.py
+python tools/verify_workflow.py
+python tools/benchmark_incremental.py
+```
+
+The original 47 tests remain unchanged. Seven incremental tests cover 100 seeded
+eight-step event/time sequences against full evaluation, global uncited fact
+sources/removal, indexed lifecycle/state reuse, reviewed rebind isolation,
+definition-change fallback and indexed shared-obligation budget limits. The full
+path is the differential reference, with retained independent raw-input DAG
+oracles also checked separately; neither establishes real-world truth.
+
+Local ordinary-wheel verification of all nine raw Git/LF archive/wheel/installed
+module byte associations, actual console modes and offline examples is recorded
+in [ITERATIONS.md](ITERATIONS.md). The earlier 0.1.1 results above remain historical.
+The incremental benchmark reports both initial and update costs, full validated
+event ingress, small-case slowdowns, all timing samples and Python/lifetime RSS
+peaks. [INCREMENTAL.md](INCREMENTAL.md) states the counter scope and remaining
+linear costs. No reviewer score is assigned by these builder checks, and remote
+CI results must be checked independently for the released commit.

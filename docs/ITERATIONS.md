@@ -61,3 +61,81 @@ The substantive correction routes fact-blocker set union through budgeted antich
 Noneditable reinstall command `.venv/Scripts/python.exe -m pip install --force-reinstall .` built/installed **evidencecache 0.1.1**. Against that installed wheel, the unchanged reviewer minimal probe exited **0**, printing `exact: True`, only `{resolve:["plan","price","eu"]}`, and `strict_supersets_returned: []`. The unchanged reviewer independent probe exited **0**, with **6 API tests, OK** and **120 oracle cases, 0 mismatches**. The installed-wheel full suite ran **47 tests, OK** (observed 2.604 s in a concurrent batch). `examples/workflow.py` passed; `tools/verify_workflow.py` passed all principal commands, artifact preservation, exits 1/2/3, 100-group baseline/ablation counts and a new installed-CLI shared-fact case with exactly one fact-resolution task. No reviewer-owned files were edited. These are observed verification results; a fresh independent score at the final SHA is still required.
 
 At exact historical commits, `tools/review_history.py --revision eb58cc7 --probe fact_frontier` reproduces both `{R}` and `{R,X}` with a nonempty strict-superset list; the same probe at `efa06521d41617da3d3cb7ed8e33b10cfca82d56` returns only `{R}` and `strict_supersets_returned: []`. `pip check` reports no broken requirements, and installed metadata/imports confirm version 0.1.1 from `.venv/Lib/site-packages`. This fourth correction has its own substantive commit; no prior history is rewritten.
+
+## 0.2.0 update, self-review 1 — measure and restrict repeated evaluation
+
+Original reviewed baseline: `1bcf8b5c0e41b0135b2fe83e9f4850481caa0653` (0.1.1).
+Remote README additions at `dadfe734b755bede16d9492b08ac733121ed5c24` were retained by a normal fast-forward before implementation.
+Implementation: `cc9878361fec7befcd2f09fe46f9a4eb24cde36b`.
+
+A canonical LF archive, ordinary wheel and fresh isolated install of the baseline
+passed its original 47 tests in 1.260 s. An actual line-trace probe of 300 independent
+source/claim/answer branches showed complete evaluation of all 300 sources, 300
+claims and 300 answers after publishing only one source (301 version evaluations).
+Only that branch was blocked. This was a repeated-evaluation cost, not a newly
+discovered wrong decision. The first trace harness counted the inline `known`
+comprehension's repeated line events as 600/601 sources; its original bytes and
+failed assertion were preserved. Counting the following current-version assignment
+correctly measured 300 sources for each full evaluation. No product patch is
+attributed to that instrumentation correction.
+
+`SnapshotCache` indexes source users, claim successors/answers, global fact-key
+users and lifecycle time boundaries. It reevaluates affected lifecycle/state
+records and shares immutable unaffected records, while preserving full Snapshot
+and definition-change fallback behavior. The implementation adds no persisted
+cache or CLI cache mode. The first installed run had 52 successful tests and one
+test-generator error: a randomized sequence had revoked every available version
+and then called `choice([])`. This is a harness error, not an incremental engine
+failure; the original commit/archive/log remain available to reviewers.
+
+## 0.2.0 update, self-review 2 — composition, global facts and residual cost
+
+Verification revision: `2d2652449bd0bdb8bd99c50a1fd2beb10d02771f`.
+The generator now advances time when no unrevoked version remains. Package
+modules are unchanged from the implementation revision; no second product defect
+or fix is claimed.
+
+A fresh ordinary wheel passed 53 tests in 9.465 s. The new 100 fixed-seed sequences
+each execute eight event/time steps and compare all lifecycle/fact/task/state
+records, blocker provenance, reports, every answer's plan/witness and budgets
+1/4/5 against a complete Snapshot. Targeted tests include an uncited new source,
+source removal, forward/backward exact boundaries, reviewed rebind, ordinary
+mutation isolation, mismatch/failure noncommit and graph-edit fallback.
+Unchanged copies of prior reviewer probes passed six API checks, 120 truth-table
+DAGs with zero mismatches, and 240 repair plus 240 witness frontiers with zero
+mismatches. The shared-obligation budget still fails at 4 and returns one exact
+plan at 5. The old reviewer originals and historical scores were not changed.
+
+The 300 independent-branch update evaluated 1 source/2 versions/1 claim/1 answer,
+but still compared 300 source and claim definitions, rebuilt 602 temporal entries
+and copied 1500 old state-map entries. Seven-sample medians: complete/cache
+evaluation 3.068/0.776 ms; full validated event plus evaluation 20.897/18.502 ms.
+Initial complete/cache construction cost 2.930/3.420 ms. One- and three-branch
+cache updates were slower than complete evaluation; all samples and Python/RSS
+measurements were retained, not only the favorable larger case. These are local
+synthetic observations, not a total sublinear-work or production-speed guarantee.
+
+## 0.2.0 update, self-review 3 — installed integration and unchanged contracts
+
+Package/documentation revision: `4d20afc5479502e90eab174e3e4acfaed62a0835`.
+A fresh canonical LF archive, ordinary 0.2.0 wheel and isolated site install had
+byte-for-byte equality with raw Git blobs for all nine modules, and `pip check`
+reported no broken requirements. The 53 archived tests passed in 9.008 s.
+The subsequently added seventh incremental test passed with the other six against
+those same installed module bytes (7 tests, 7.772 s); it explicitly checks the
+indexed snapshot's shared `(R OR X) AND R` budget boundary at 4/5. The rebind
+failure test was also made specific to a new, legal version ID with changed fact
+content, avoiding rejection merely for a duplicate ID.
+
+The actual `sysconfig` console executable ran demo, validation, reporting, blocked
+gate exit 1, witness, plan, limit exit 3 and malformed-event exit 2 in native,
+`PYTHONUTF8=0/1`, cp936 and cp1252 output modes. Unicode provenance remained
+ASCII-safe machine JSON, inputs were unchanged and invalid apply preserved an
+existing output. Installed `examples/workflow.py`, `examples/incremental.py` and
+`tools/verify_workflow.py` all exited 0. The existing 100-group five-policy
+contrast and original CLI semantics were preserved. No new product defect was
+found in this third review; it is an integration verification round, not a claimed
+third correction. Final commit association and final full-suite results are
+recorded separately at the frozen artifact, and independent review is still
+required. No customers, revenue, production safety or remote CI success are
+inferred from builder verification.

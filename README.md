@@ -180,3 +180,5 @@ Ragas already provides RAG quality metrics; dbt already provides freshness and d
 上面的安装和 CLI 命令可直接运行。Windows 使用 `py -3`。演示的三条答案分别展示“备用证据仍有效”“独立来源不受影响”“来源都新鲜但事实冲突”。`python examples/workflow.py` 演示完整的来源更新、影响比较、人工确认后重新绑定以及再次核验流程；`python tools/verify_workflow.py` 在临时目录运行已安装 CLI，核对错误退出码、输入保护和五种策略的结果。`benchmark` 对比全库 TTL、平面来源 TTL 和功能消融，所有数据均为公开的合成样例。
 
 这是声明式证据约束检查，不会自动理解自然语言矛盾，不证明事实真实，也不替代 Ragas 的质量评测或 dbt 的数据编排。最小刷新集合表示条件性核验义务，执行后必须重新评估。库不会访问来源 URL；内容指纹不等同于签名。实际客户、收入和付费意愿均未知。
+
+0.2 的内存 SDK `SnapshotCache` 复用未受影响的来源状态、主张与答案，保留未直接引用的新来源引发的全局事实冲突和时间边界检查。每次更新必须提供一致的 `trust_domain`；它防止意外混用，不能认证来源。图定义变化回退到完整求值，CLI 仍执行完整求值。验证、比较、浅复制和时间索引维护仍有线性成本，小输入可能更慢；不提供持久化或多写者同步。运行 `python examples/incremental.py` 和 `python tools/benchmark_incremental.py` 可核对离线流程与公开合成成本。

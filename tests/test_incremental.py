@@ -121,6 +121,30 @@ class IncrementalTests(unittest.TestCase):
         self.assertEqual(after.work["mode"], "full")
         same(self, after)
 
+    def test_shared_fact_budget_after_indexed_update(self):
+        fact = dict(subject="plan", predicate="price", scope=DOMAIN, value=10)
+        def source(key, value, ttl):
+            return dict(id=key, uri="urn:synthetic:" + key, versions=[dict(id="v1",
+                observed_at="2026-01-01T00:00:00Z", ttl_seconds=ttl, facts=[dict(fact, value=value)])])
+        def ev(key):
+            return {"evidence": dict(source=key, version="v1")}
+        data = dict(schema_version=1, sources=[source("fresh", 10, 172800),
+            source("opponent", 20, 172800), source("stale", 10, 86400)],
+            claims=[dict(id="inner", text="price", fact=fact, support=ev("fresh")),
+                    dict(id="outer", text="price", fact=fact,
+                         support={"any": [{"claim": "inner"}, ev("stale")]})],
+            answers=[dict(id="a", text="price", support={"claim": "outer"})])
+        cache = SnapshotCache(Manifest.from_dict(data), AS_OF, trust_domain=DOMAIN)
+        after = cache.advance("2026-01-02T00:00:00.000001Z", trust_domain=DOMAIN)
+        self.assertEqual(after.work["mode"], "incremental")
+        with self.assertRaises(PlanningLimitError):
+            after.plan("a", max_work=4)
+        plan = after.plan("a", max_work=5)
+        self.assertEqual(plan["candidates_examined"], 5)
+        self.assertEqual(len(plan["plans"]), 1)
+        self.assertEqual(plan["minimum_task_count"], 1)
+        same(self, after)
+
     def test_100_seeded_event_time_compositions(self):
         rng = random.Random(62120261003)
         origin = datetime(2026, 1, 2, tzinfo=timezone.utc)
