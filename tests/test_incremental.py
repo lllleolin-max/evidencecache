@@ -143,9 +143,12 @@ class IncrementalTests(unittest.TestCase):
                 elif choice == 2:
                     candidates = [(source, version) for source in manifest.sources for version in source.versions
                                   if version.revoked_at is None]
-                    source, version = rng.choice(candidates)
-                    result = cache.apply_event(dict(kind="revoke", source=source.id, version=version.id,
-                        at=max(origin, version.observed_at).isoformat()), trust_domain=DOMAIN)
+                    if candidates:
+                        source, version = rng.choice(candidates)
+                        result = cache.apply_event(dict(kind="revoke", source=source.id, version=version.id,
+                            at=max(origin, version.observed_at).isoformat()), trust_domain=DOMAIN)
+                    else:
+                        result = cache.advance(origin.isoformat(), trust_domain=DOMAIN)
                 elif choice == 3:
                     data = manifest.to_dict()
                     source = deepcopy(data["sources"][0])
