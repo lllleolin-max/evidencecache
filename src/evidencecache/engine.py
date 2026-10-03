@@ -58,8 +58,11 @@ class Snapshot:
     claim_by_id: Mapping[str, Claim]
     answer_by_id: Mapping[str, Answer]
     fact_blockers: Mapping[str, str]
+    work: Mapping[str, Any]
 
     def __init__(self, manifest: Manifest, as_of: str):
+        work = dict(mode="full", sources_evaluated=0, versions_evaluated=0,
+                    fact_claims_evaluated=0, claims_evaluated=0, answers_evaluated=0)
         object.__setattr__(self, "manifest", manifest)
         object.__setattr__(self, "as_of", timestamp(as_of))
         object.__setattr__(self, "versions", {Evidence(s.id, v.id): v for s in manifest.sources for v in s.versions})
@@ -71,9 +74,11 @@ class Snapshot:
         object.__setattr__(self, "claim_by_id", {c.id: c for c in manifest.claims})
         object.__setattr__(self, "answer_by_id", {a.id: a for a in manifest.answers})
         for source in manifest.sources:
+            work["sources_evaluated"] += 1
             known = [v for v in source.versions if v.observed_at <= self.as_of]
             current = known[-1] if known else None
             for version in source.versions:
+                work["versions_evaluated"] += 1
                 ref = Evidence(source.id, version.id)
                 if version.observed_at > self.as_of:
                     status = "NOT_YET_OBSERVED"
@@ -101,6 +106,7 @@ class Snapshot:
         for claim in manifest.claims:
             if claim.fact is None:
                 continue
+            work["fact_claims_evaluated"] += 1
             entries = self.facts.get(claim.fact.key, [])
             values = {e["value_json"] for e in entries}
             if len(values) > 1 or (values and claim.fact.value_json not in values):
@@ -112,16 +118,19 @@ class Snapshot:
                                            instruction="Reconcile authoritative values; revoke/correct bad evidence or regenerate claims, then evaluate again.")
                 self.fact_blockers[claim.id] = task_id
         for claim_id in manifest.order:
+            work["claims_evaluated"] += 1
             claim = self.claim_by_id[claim_id]
             state = self._state(claim.support)
             if claim_id in self.fact_blockers:
                 state = State(False, state.blockers | {self.fact_blockers[claim_id]})
             self.claims[claim_id] = state
         for answer in manifest.answers:
+            work["answers_evaluated"] += 1
             self.answers[answer.id] = self._state(answer.support)
         for name in ("versions", "evidence", "facts", "tasks", "claims", "answers",
                      "claim_by_id", "answer_by_id", "fact_blockers"):
             object.__setattr__(self, name, _freeze(getattr(self, name)))
+        object.__setattr__(self, "work", _freeze(work))
 
     @staticmethod
     def refresh_id(ref: Evidence) -> str:

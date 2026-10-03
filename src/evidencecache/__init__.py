@@ -2,6 +2,7 @@
 from .model import Manifest, ManifestError, load, loads
 from .engine import PlanningLimitError, Snapshot, compare
 from .events import apply_event
+from .incremental import SnapshotCache
 
 __version__ = "0.1.1"
-__all__ = ["Manifest", "ManifestError", "PlanningLimitError", "Snapshot", "apply_event", "compare", "load", "loads"]
+__all__ = ["Manifest", "ManifestError", "PlanningLimitError", "Snapshot", "SnapshotCache", "apply_event", "compare", "load", "loads"]
